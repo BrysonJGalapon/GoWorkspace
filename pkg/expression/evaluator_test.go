@@ -44,3 +44,11 @@ func TestEvaluateTestCase3(t *testing.T) {
 func TestEvaluateTestCase4(t *testing.T) {
 	runTest(test{expression: "(3/2)", expectedValue: 1.5}, t)
 }
+
+func TestEvaluateTestCase5(t *testing.T) {
+	runTest(test{expression: "(-3-2)*2", expectedValue: -10.0}, t)
+}
+
+func TestEvaluateTestCase6(t *testing.T) {
+	runTest(test{expression: "(-3-2)*-2", expectedValue: 10.0}, t)
+}

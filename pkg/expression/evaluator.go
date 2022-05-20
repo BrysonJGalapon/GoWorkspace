@@ -169,7 +169,19 @@ func splitStringByOperations(str string, operations set.Set[rune]) (tokens []str
 	tokens = make([]string, 0)
 
 	token := bytes.Buffer{}
-	for _, char := range str {
+
+	chars := []rune(str)
+	for i, char := range chars {
+		// a '-' is a negative sign if there is no previous character, or the previous character an open parenthesis '(' or
+		// the previous character is an operation (e.g. -, +, *, etc.)
+		isNegativeSign := char == '-' && (i == 0 || chars[i-1] == '(' || isAnOperation(chars[i-1]))
+		if isNegativeSign {
+			// do not split on 'negative' signs (e.g. -3) -- just add it normally
+			token.WriteRune(char)
+			continue
+		}
+
+		// perform split
 		if operations.Contains(char) {
 			tokens = append(tokens, token.String())
 			token = bytes.Buffer{}
@@ -204,6 +216,10 @@ func buildAst(tokens []string) *tree.Node[string] {
 	}
 
 	return root
+}
+
+func isAnOperation(r rune) bool {
+	return ALL_OPERATIONS.Contains(r)
 }
 
 func NewEvaluator() Evaluator {
