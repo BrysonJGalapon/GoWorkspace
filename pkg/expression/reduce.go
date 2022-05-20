@@ -1,8 +1,10 @@
 package expression
 
-func reduce(f func(x, y float64) float64, values []float64) (result float64) {
+import "fmt"
+
+func reduce(f func(x, y float64) float64, values []float64) (result float64, err error) {
 	if len(values) < 2 {
-		panic("can't reduce a slice with less than 2 elements")
+		return 0, fmt.Errorf("can't reduce a slice with less than 2 elements")
 	}
 
 	result = values[0]
@@ -11,7 +13,7 @@ func reduce(f func(x, y float64) float64, values []float64) (result float64) {
 		result = f(result, values[i])
 	}
 
-	return result
+	return result, nil
 }
 
 func add(x, y float64) float64 {

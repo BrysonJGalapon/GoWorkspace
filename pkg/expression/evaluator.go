@@ -12,12 +12,12 @@ import (
 
 // Evaluator evaluates an Expression and returns its equivalent value
 type Evaluator interface {
-	Evaluate(Expression) (value float64)
+	Evaluate(Expression) (value float64, err error)
 }
 
 type evaluator struct{}
 
-func (e *evaluator) Evaluate(expression Expression) (value float64) {
+func (e *evaluator) Evaluate(expression Expression) (value float64, err error) {
 	// handle nested expressions with a stack
 	stack := stack.New[bytes.Buffer]()
 
@@ -45,7 +45,10 @@ func (e *evaluator) Evaluate(expression Expression) (value float64) {
 		//	3. set the current buffer as that buffer
 		if char == ')' {
 			expr := Expression(currExpression.String())
-			v := evaluateNonNestedExpression(expr)
+			v, err := evaluateNonNestedExpression(expr)
+			if err != nil {
+				return 0, err
+			}
 			currExpression, _ = stack.Pop()
 			currExpression.WriteString(fmt.Sprintf("%f", v))
 			continue
@@ -61,9 +64,9 @@ func (e *evaluator) Evaluate(expression Expression) (value float64) {
 }
 
 // evaluateNonNestedExpression evaluates the given expression, assuming that it does not contain any open or closed parenthesis
-func evaluateNonNestedExpression(expression Expression) (value float64) {
+func evaluateNonNestedExpression(expression Expression) (value float64, err error) {
 	if expression == "" {
-		panic("can't evaluate an empty expression")
+		return 0, fmt.Errorf("can't evaluate an empty expression")
 	}
 
 	// initialize AST as a single node containing the full expression
@@ -79,7 +82,7 @@ func evaluateNonNestedExpression(expression Expression) (value float64) {
 }
 
 // evaluateAst evaluates the AST in post-order fashion
-func evaluateAst(ast *tree.Node[string]) (value float64) {
+func evaluateAst(ast *tree.Node[string]) (value float64, err error) {
 	// ast is a leaf node, so evaluate it as a constant
 	if len(ast.Children) == 0 {
 		return evaluateConstant(ast.Data)
@@ -88,7 +91,10 @@ func evaluateAst(ast *tree.Node[string]) (value float64) {
 	// ast is an inner node, so evaluate all of its children ...
 	values := make([]float64, len(ast.Children))
 	for i, child := range ast.Children {
-		values[i] = evaluateAst(child)
+		values[i], err = evaluateAst(child)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	// ... and then perform the operation on all the children
@@ -96,7 +102,7 @@ func evaluateAst(ast *tree.Node[string]) (value float64) {
 	return reduceValuesByOperation(values, operation)
 }
 
-func reduceValuesByOperation(values []float64, operation rune) float64 {
+func reduceValuesByOperation(values []float64, operation rune) (float64, error) {
 	switch operation {
 	case '+':
 		return reduce(add, values)
@@ -107,13 +113,12 @@ func reduceValuesByOperation(values []float64, operation rune) float64 {
 	case '/':
 		return reduce(divide, values)
 	default:
-		panic("unhandled operation: " + string(operation))
+		return 0, fmt.Errorf("unhandled operation: " + string(operation))
 	}
 }
 
-func evaluateConstant(str string) float64 {
-	value, _ := strconv.ParseFloat(str, 64)
-	return value
+func evaluateConstant(str string) (float64, error) {
+	return strconv.ParseFloat(str, 64)
 }
 
 // expandLeaves replaces each leaf node in the given AST with an equivalent AST that was generated from the tokens

@@ -6,8 +6,9 @@ import (
 )
 
 type test struct {
-	expression    string
-	expectedValue float64
+	expression      string
+	expectedValue   float64
+	isErrorExpected bool
 }
 
 func runTest(tst test, t *testing.T) {
@@ -19,7 +20,17 @@ func runTest(tst test, t *testing.T) {
 
 	evaluator := NewEvaluator()
 
-	if actualValue := evaluator.Evaluate(expression); !isFloat64Equal(actualValue, expectedValue) {
+	actualValue, err := evaluator.Evaluate(expression)
+
+	if tst.isErrorExpected && (err == nil) {
+		t.Fatalf("Expression: %s, error expected, but got nil", tst.expression)
+	}
+
+	if !tst.isErrorExpected && (err != nil) {
+		t.Fatalf("Expression: %s, error not expected, but got %s", tst.expression, err)
+	}
+
+	if !tst.isErrorExpected && !isFloat64Equal(actualValue, expectedValue) {
 		t.Fatalf("Expression: %s, Expected: %f, but got: %f", tst.expression, expectedValue, actualValue)
 	}
 }
